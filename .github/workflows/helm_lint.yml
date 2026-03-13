@@ -1,0 +1,41 @@
+name: "helm chart linting"
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  push:
+    branches-ignore:
+      - main
+    paths:
+      - 'templates/**'
+      - 'Chart.yaml'
+      - 'values.yaml'
+      - '.helmignore'
+  pull_request:
+    paths:
+      - 'templates/**'
+      - 'Chart.yaml'
+      - 'values.yaml'
+      - '.helmignore'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  helm-lint:
+    runs-on: ubuntu-slim
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Lint Helm Chart
+        run: |
+          helm lint .
+
+      - name: Dry Run Helm Template
+        run: |
+          helm template espocrm . --dry-run=client --debug

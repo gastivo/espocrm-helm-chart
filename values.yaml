@@ -1,0 +1,241 @@
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: docker.io/espocrm/espocrm
+  tag: 9.3.4
+
+logging:
+  level: DEBUG # DEBUG,NOTICE,WARNING,INFO,ERROR,CRITICAL
+
+ingress:
+  enabled: false
+  # className: nginx
+  # hosts:
+  #   - espocrm.example.com
+  #   - espocrm-alias.example.com
+  # tls:
+  #   - hosts:
+  #       - espocrm.example.com
+  #     secretName: espocrm-tls
+  # annotations:
+  #   cert-manager.io/cluster-issuer: letsencrypt-prod
+  #   nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+  #   nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+
+admin:
+  username: "admin"
+  password: ""
+  existingSecret: "" # If you want to use an existing Kubernetes Secret for the admin password
+  existingKey: "admin-password" # The key in the existing secret that contains the admin password
+
+bootstrap:
+  # path where bootstrap can find .zip files to install extensions, default is empty
+  extensionsPath: ""
+  # Number of retries before the Job is considered failed
+  backoffLimit: 3
+  # Resource requests/limits for the bootstrap Job container
+  resources:
+    requests:
+      cpu: 300m
+      memory: 512Mi
+    limits:
+      cpu: 800m
+      memory: 1Gi
+
+daemon:
+  replicaCount: 1
+  # php_ini: |
+  #   memory_limit=512M
+  #  resources:
+  #    requests:
+  #      cpu: 300m
+  #      memory: 512Mi
+  #    limits:
+  #      cpu: 800m
+  #      memory: 1Gi
+
+web:
+  replicaCount: 1
+  service:
+    type: ClusterIP
+  # php_ini: |
+  #   memory_limit=256M
+  #  resources:
+  #    requests:
+  #      cpu: 300m
+  #      memory: 512Mi
+  #    limits:
+  #      cpu: 800m
+  #      memory: 1Gi
+  livenessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 30
+    timeoutSeconds: 10
+    periodSeconds: 30
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 10
+    timeoutSeconds: 10
+    periodSeconds: 10
+    failureThreshold: 3
+  startupProbe:
+    httpGet:
+      path: /
+      port: http
+    failureThreshold: 10
+    initialDelaySeconds: 10
+    timeoutSeconds: 10
+    periodSeconds: 5
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
+    # metrics: []        # Fully overrides the generated metrics block (HPA v2 metrics array)
+    # behavior: {}       # Fully overrides the behavior block (scaleUp/scaleDown policies)
+
+websocket:
+  enabled: true
+  replicaCount: 1
+  service:
+    type: ClusterIP
+  # php_ini: |
+  #   memory_limit=256M
+  #  resources:
+  #    requests:
+  #      cpu: 300m
+  #      memory: 512Mi
+  #    limits:
+  #      cpu: 800m
+  #      memory: 1Gi
+  livenessProbe:
+    tcpSocket:
+      port: websocket
+    initialDelaySeconds: 30
+    timeoutSeconds: 5
+    periodSeconds: 30
+    failureThreshold: 3
+  readinessProbe:
+    tcpSocket:
+      port: websocket
+    initialDelaySeconds: 30
+    timeoutSeconds: 5
+    periodSeconds: 10
+    failureThreshold: 3
+  startupProbe:
+    tcpSocket:
+      port: websocket
+    failureThreshold: 10
+    initialDelaySeconds: 30
+    timeoutSeconds: 5
+    periodSeconds: 5
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
+    # metrics: []        # Fully overrides the generated metrics block (HPA v2 metrics array)
+    # behavior: {}       # Fully overrides the behavior block (scaleUp/scaleDown policies)
+
+persistence:
+  size: 1Gi
+  # accessModes defines the PVC access modes.
+  # Use ReadWriteMany for production (NFS / cloud RWX storage).
+  # Use ReadWriteOnce for local dev clusters (hostpath / local-path provisioner).
+  accessModes:
+    - ReadWriteMany
+  # storageClass: ""
+  # existingClaim: ""
+  # annotations: {}
+
+# Extra environment variables to add to the ConfigMap.
+# Example:
+# extraEnv:
+#   ESPOCRM_LANGUAGE: "de_DE"
+#   ESPOCRM_DEFAULT_CURRENCY: "EUR"
+#   ESPOCRM_THOUSAND_SEPARATOR: "."
+extraEnv: { }
+
+# Name of an existing Secret whose keys are injected as env vars into ALL containers.
+# The secret must exist before the chart is deployed.
+# Example:
+# extraSecretRef: "my-custom-secret"
+extraSecretRef: ""
+
+externalDatabase:
+  platform: Postgresql # Mysql or Postgresql
+  host: "postgresql.postgresql.svc.cluster.local"
+  port: 5432
+  user: ""
+  password: ""
+  database: ""
+  existingSecret: ""
+  secretKey: "db-password"
+
+# Extra volume mounts added to ALL pods (web, daemon, websocket, bootstrap job).
+# Useful for RWX-backed PVCs or ConfigMaps shared across all components.
+# Example:
+# extraVolumeMounts:
+#   - name: shared-assets
+#     mountPath: /var/www/html/public/assets
+#
+# To extend config-override.php / config-override-internal.php mount a ConfigMap
+# as config-override-cm.php / config-override-internal-cm.php next to them.
+# config-override.php will automatically include the file if it exists:
+# extraVolumeMounts:
+#   - name: espocrm-config-override-cm
+#     mountPath: /var/www/html/data/config-override-cm.php
+#     subPath: config-override-cm.php
+#     readOnly: true
+#   - name: espocrm-config-override-internal-cm
+#     mountPath: /var/www/html/data/config-override-internal-cm.php
+#     subPath: config-override-internal-cm.php
+#     readOnly: true
+extraVolumeMounts: [ ]
+
+# Extra volumes added to ALL pods (web, daemon, websocket, bootstrap job).
+# Must match the names referenced in extraVolumeMounts above.
+# Example:
+# extraVolumes:
+#   - name: shared-assets
+#     persistentVolumeClaim:
+#       claimName: espocrm-shared-assets   # must be a RWX PVC
+#
+# ConfigMaps for the PHP config override cm-files (must exist before chart is deployed).
+# The ConfigMap key must match the subPath used in extraVolumeMounts:
+# extraVolumes:
+#   - name: espocrm-config-override-cm
+#     configMap:
+#       name: espocrm-config-override-cm
+#   - name: espocrm-config-override-internal-cm
+#     configMap:
+#       name: espocrm-config-override-internal-cm
+extraVolumes: [ ]
+
+# Pod-level security context. fsGroup: 33 ensures all mounted PVC volumes
+# are group-owned by www-data so Apache workers can write to them.
+podSecurityContext:
+  fsGroup: 33  # www-data
+
+# Container-level security context. Containers must run as root (uid 0)
+# because docker-entrypoint.sh calls chown inside setPermissions().
+securityContext: { }
+
+# enable this only if you have a metrics Extension installed!
+metrics:
+  available: false
+  serviceMonitor:
+    enabled: false
+    path: "/api/v1/metrics"
+    annotations: { }
+    interval: 30s
+    scrapeTimeout: 10s
+    relabelings: [ ]

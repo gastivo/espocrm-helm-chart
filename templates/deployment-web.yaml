@@ -1,0 +1,152 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "espocrm.fullname" . }}-web
+  labels:
+    {{- include "espocrm.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+  {{- with .Values.deploymentAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if not .Values.web.autoscaling.enabled }}
+  replicas: {{ .Values.web.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "espocrm.selectorLabelsWeb" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        helm.sh/revision: {{ .Release.Revision | quote }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "espocrm.labels" . | nindent 8 }}
+        app.kubernetes.io/component: web
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: [ "/bin/bash", "/usr/local/bin/ha-entrypoint.sh" ]
+          args: [ "docker-entrypoint.sh", "apache2-foreground" ]
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            {{- if .Values.metrics.available }}
+            - name: metrics
+              containerPort: 9100
+              protocol: TCP
+            {{- end }}
+          {{- with .Values.web.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.web.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.web.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: espocrm-misc
+              mountPath: /var/www/html/data/config-override.php
+              subPath: config-override.php
+            - name: espocrm-misc
+              mountPath: /var/www/html/data/config-override-internal.php
+              subPath: config-override-internal.php
+              readOnly: true
+            - name: espocrm-data
+              mountPath: /var/www/html/data
+              subPath: data
+            - name: espocrm-data
+              mountPath: /var/www/html/custom
+              subPath: custom
+            - name: espocrm-data
+              mountPath: /var/www/html/client/custom
+              subPath: client-custom
+            - name: espocrm-misc
+              mountPath: /usr/local/bin/ha-entrypoint.sh
+              subPath: ha-entrypoint.sh
+              readOnly: true
+            - name: espocrm-misc
+              mountPath: /etc/apache2/sites-enabled/000-default.conf
+              subPath: 000-default.conf
+              readOnly: true
+            {{- if .Values.metrics.available }}
+            - name: espocrm-misc
+              mountPath: /etc/apache2/sites-enabled/001-metrics.conf
+              subPath: 001-metrics.conf
+              readOnly: true
+            {{- end }}
+            {{- if .Values.web.php_ini }}
+            - name: espocrm-misc
+              mountPath: /usr/local/etc/php/conf.d/99-custom.ini
+              subPath: web-php.ini
+              readOnly: true
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "espocrm.fullname" . }}-env
+            {{- include "espocrm.extraEnvFrom" . | nindent 12 }}
+          env:
+            - name: ESPOCRM_ADMIN_UPGRADE_DISABLED
+              value: "true"
+            - name: ESPOCRM_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "espocrm.adminSecretName" . }}
+                  key: {{ include "espocrm.adminSecretKey" . }}
+            - name: ESPOCRM_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "espocrm.databaseSecretName" . }}
+                  key: {{ .Values.externalDatabase.secretKey | quote }}
+            {{- with .Values.extraEnvVars }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: espocrm-misc
+          configMap:
+            name: {{ include "espocrm.fullname" . }}-misc
+            defaultMode: 0755
+        - name: espocrm-data
+          persistentVolumeClaim:
+            claimName: {{ include "espocrm.dataClaimName" . }}
+        {{- with .Values.extraVolumes }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

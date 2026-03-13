@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "espocrm.fullname" . }}-misc
+  labels:
+    {{- include "espocrm.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-50"
+    "helm.sh/hook-delete-policy": before-hook-creation
+data:
+  {{- range $path, $content := .Files.Glob "scripts/*.sh" }}
+  {{ base $path }}: |
+{{ $content | toString | indent 4 }}
+  {{- end }}
+  config-override.php: |
+{{ .Files.Get "config/config-override.php" | indent 4 }}
+  config-override-internal.php: |
+{{ .Files.Get "config/config-override-internal.php" | indent 4 }}
+  000-default.conf: |
+{{ .Files.Get "config/000-default.conf" | indent 4 }}
+  {{- if .Values.metrics.available }}
+  001-metrics.conf: |
+{{ .Files.Get "config/001-metrics.conf" | indent 4 }}
+  {{- end }}
+  web-php.ini: |
+{{ .Values.web.php_ini | default "" | trim | indent 4 }}
+  daemon-php.ini: |
+{{ .Values.daemon.php_ini| default "" | trim | indent 4 }}
+  websocket-php.ini: |
+{{ .Values.websocket.php_ini | default "" | trim | indent 4 }}

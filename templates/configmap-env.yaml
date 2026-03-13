@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "espocrm.fullname" . }}-env
+  labels:
+    {{- include "espocrm.labels" . | nindent 4 }}
+data:
+  ESPOCRM_ADMIN_USERNAME: {{ .Values.admin.username | default "admin" | quote }}
+  ESPOCRM_EXTENSIONS_PATH: {{ .Values.bootstrap.extensionsPath | default "" | quote }}
+  ESPOCRM_DATABASE_PLATFORM: {{ .Values.externalDatabase.platform | quote }}
+  ESPOCRM_DATABASE_HOST: {{ .Values.externalDatabase.host | quote }}
+  ESPOCRM_DATABASE_PORT: {{ .Values.externalDatabase.port | quote }}
+  ESPOCRM_DATABASE_NAME: {{ .Values.externalDatabase.database | quote }}
+  ESPOCRM_DATABASE_USER: {{ .Values.externalDatabase.user | quote }}
+  ESPOCRM_CONFIG_LOGGER_LEVEL: {{ .Values.logging.level | quote }}
+  {{- if .Values.websocket.enabled }}
+  {{- if not (index (.Values.extraEnv | default dict) "ESPOCRM_CONFIG_WEB_SOCKET_URL") }}
+  {{- fail "websocket.enabled is true but extraEnv.ESPOCRM_CONFIG_WEB_SOCKET_URL is not set" }}
+  {{- end }}
+  ESPOCRM_CONFIG_USE_WEB_SOCKET: "true"
+  ESPOCRM_CONFIG_WEB_SOCKET_ZERO_M_Q_SUBSCRIBER_DSN: "tcp://*:7777"
+  ESPOCRM_CONFIG_WEB_SOCKET_ZERO_M_Q_SUBMISSION_DSN: "tcp://localhost:7777"
+  {{- end }}
+  {{- if .Values.extraEnv }}
+  {{- range $key, $value := .Values.extraEnv }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+  {{- end }}

@@ -1,0 +1,46 @@
+name: "helm chart build and push"
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Chart.yaml'
+      - 'templates/**'
+      - 'values.yaml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  lint:
+    uses: ./.github/workflows/helm_lint.yml
+    permissions:
+      contents: read
+
+  push_helm_chart:
+    needs: lint
+    runs-on: ubuntu-slim
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install helm
+        uses: Azure/setup-helm@v5
+
+      - name: Login to GitHub Container Registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username ${{ github.actor }} --password-stdin
+
+      - name: Publish chart to GHCR
+        run: |
+          CHART_NAME=$(yq -r '.name' Chart.yaml)
+          CHART_VERSION=$(yq -r '.version' Chart.yaml)
+          helm package .
+          helm push ${CHART_NAME}-${CHART_VERSION}.tgz oci://ghcr.io/${{ github.repository_owner }}/helm-charts

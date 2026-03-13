@@ -1,0 +1,18 @@
+{{- if and (not .Values.config.existingConfigMap) (or .Values.config.configOverride .Values.config.configInternalOverride) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "espocrm.fullname" . }}-config-override
+  labels:
+    {{- include "espocrm.labels" . | nindent 4 }}
+data:
+  {{- if .Values.config.configOverride }}
+  config-override.php: |
+{{ .Values.config.configOverride | trim | indent 4 }}
+  {{- end }}
+  {{- if .Values.config.configInternalOverride }}
+  config-internal-override.php: |
+{{ .Values.config.configInternalOverride | trim | indent 4 }}
+  {{- end }}
+{{- end }}
+

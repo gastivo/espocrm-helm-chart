@@ -1,0 +1,131 @@
+{{- if .Values.websocket.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "espocrm.fullname" . }}-websocket
+  labels:
+    {{- include "espocrm.labels" . | nindent 4 }}
+    app.kubernetes.io/component: websocket
+  {{- with .Values.deploymentAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if not .Values.websocket.autoscaling.enabled }}
+  replicas: {{ .Values.websocket.replicaCount | default .Values.web.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "espocrm.selectorLabelsWebsocket" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        helm.sh/revision: {{ .Release.Revision | quote }}
+        {{- with .Values.websocket.podAnnotations | default .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "espocrm.labels" . | nindent 8 }}
+        app.kubernetes.io/component: websocket
+        {{- with .Values.websocket.podLabels | default .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      terminationGracePeriodSeconds: {{ .Values.websocket.terminationGracePeriodSeconds | default 10 }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: {{ .Chart.Name }}-wait-bootstrap
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: HELM_RELEASE_REVISION
+              value: {{ include "espocrm.bootstrapID" . | quote }}
+          command: [ "/bin/bash", "/usr/local/bin/ha-wait-bootstrap.sh" ]
+          volumeMounts:
+            - name: espocrm-misc
+              mountPath: /usr/local/bin/ha-wait-bootstrap.sh
+              subPath: ha-wait-bootstrap.sh
+              readOnly: true
+            - name: espocrm-data
+              mountPath: /var/www/html/data
+              subPath: data
+      containers:
+        - name: {{ .Chart.Name }}-websocket
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/bash", "/usr/local/bin/ha-entrypoint.sh"]
+          args: ["docker-websocket.sh"]
+          lifecycle:
+            preStop:
+              exec:
+                # php websocket.php runs as a child of the shell (not exec'd), so it never
+                # receives SIGTERM from Kubernetes. Kill it explicitly so the pod stops fast.
+                command: ["/bin/sh", "-c", "pkill -TERM -f 'php.*websocket' 2>/dev/null; sleep 2"]
+          ports:
+            - name: websocket
+              containerPort: 8080
+              protocol: TCP
+          {{- with .Values.websocket.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.websocket.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.websocket.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resourcesWebsocket | nindent 12 }}
+          volumeMounts:
+            {{- include "espocrm.commonVolumeMounts" . | nindent 12 }}
+            - name: espocrm-misc
+              mountPath: /etc/apache2/sites-enabled/000-default.conf
+              subPath: 000-default.conf
+              readOnly: true
+            {{- if .Values.websocket.php_ini }}
+            - name: espocrm-misc
+              mountPath: /usr/local/etc/php/conf.d/zz-custom.ini
+              subPath: websocket-php.ini
+              readOnly: true
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "espocrm.fullname" . }}-env
+            {{- include "espocrm.extraEnvFrom" . | nindent 12 }}
+          env:
+            - name: ESPOCRM_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "espocrm.adminSecretName" . }}
+                  key: {{ include "espocrm.adminSecretKey" . }}
+            - name: ESPOCRM_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "espocrm.databaseSecretName" . }}
+                  key: {{ .Values.externalDatabase.secretKey | quote }}
+      volumes:
+        {{- include "espocrm.commonVolumes" . | nindent 8 }}
+      {{- with .Values.websocket.nodeSelector | default .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- $affinity := include "espocrm.affinity" (dict "component" "websocket" "componentValues" .Values.websocket "context" .) | trim }}
+      {{- if $affinity }}
+      affinity:
+        {{- $affinity | nindent 8 }}
+      {{- end }}
+      {{- with .Values.websocket.tolerations | default .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

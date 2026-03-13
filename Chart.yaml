@@ -1,0 +1,20 @@
+apiVersion: v2
+name: espocrm
+description: A Helm chart for deploying the EspoCRM.
+type: application
+version: 1.0.0
+appVersion: "9.2.7"
+icon: https://www.espocrm.com/images/favicon.png
+home: https://www.espocrm.com
+keywords:
+  - espocrm
+  - crm
+  - customer relationship management
+  - docker
+maintainers:
+  - name: Gastivo
+    url: https://www.gastivo.de
+sources:
+  - https://github.com/espocrm/espocrm
+  - https://github.com/espocrm/espocrm-docker
+  - https://github.com/gastivo/espocrm-helm-chart

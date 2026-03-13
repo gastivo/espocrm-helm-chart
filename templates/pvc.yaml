@@ -1,0 +1,25 @@
+{{- if not .Values.persistence.existingClaim }}
+{{- $existingPVC := lookup "v1" "PersistentVolumeClaim" .Release.Namespace (include "espocrm.dataClaimName" .) }}
+{{- if not $existingPVC }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "espocrm.dataClaimName" . }}
+  labels:
+    {{- include "espocrm.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+    {{- with .Values.persistence.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  accessModes:
+    {{- toYaml (.Values.persistence.accessModes | default (list "ReadWriteMany")) | nindent 4 }}
+  {{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.size | default "1Gi" }}
+{{- end }}
+{{- end }}

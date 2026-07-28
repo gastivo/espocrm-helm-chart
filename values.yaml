@@ -3,7 +3,7 @@ fullnameOverride: ""
 
 image:
   repository: docker.io/espocrm/espocrm
-  tag: 9.3.4
+  tag: 9.3.10
 
 logging:
   level: DEBUG # DEBUG,NOTICE,WARNING,INFO,ERROR,CRITICAL
@@ -81,6 +81,14 @@ daemon:
   #    limits:
   #      cpu: 800m
   #      memory: 1Gi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
+    # metrics: []        # Fully overrides the generated metrics block (HPA v2 metrics array)
+    # behavior: {}       # Fully overrides the behavior block (scaleUp/scaleDown policies)
 
 web:
   replicaCount: 1

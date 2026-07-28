@@ -140,6 +140,9 @@ else
   echo "info: No extensions path provided or directory does not exist. Skipping extension installation."
 fi
 
+echo "info: setting ownership of /var/www/html/custom..."
+chown -R www-data:www-data /var/www/html/custom
+
 echo "info: EspoCRM bootstrap completed successfully."
 
 echo "info: Writing ready marker to $READY_FILE (revision: ${HELM_RELEASE_REVISION})"

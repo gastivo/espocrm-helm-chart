@@ -1,0 +1,41 @@
+{{- if .Values.daemon.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "espocrm.fullname" . }}-daemon
+  labels:
+    {{- include "espocrm.labels" . | nindent 4 }}
+    app.kubernetes.io/component: daemon
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "espocrm.fullname" . }}-daemon
+  minReplicas: {{ .Values.daemon.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.daemon.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.daemon.autoscaling.metrics }}
+    {{- toYaml .Values.daemon.autoscaling.metrics | nindent 4 }}
+    {{- else }}
+    {{- if .Values.daemon.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.daemon.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.daemon.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.daemon.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+    {{- end }}
+  {{- with .Values.daemon.autoscaling.behavior }}
+  behavior:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

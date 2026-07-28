@@ -8,9 +8,9 @@ The chart deploys three separate deployments:
 
 | Deployment          | Description                    | Scalable |
 |---------------------|--------------------------------|----------|
-| `espocrm-web`       | Web application (Apache + PHP) | ✅ Yes    |
-| `espocrm-daemon`    | Background job processor       | ✅ Yes    |
-| `espocrm-websocket` | WebSocket server               | ✅ Yes    |
+| `espocrm-web`       | Web application (Apache + PHP) | ✅ Yes   |
+| `espocrm-daemon`    | Background job processor       | ✅ Yes   |
+| `espocrm-websocket` | WebSocket server               | ✅ Yes   |
 
 ## Prerequisites
 
@@ -72,10 +72,7 @@ config:
 
 **Option B – Existing ConfigMap (umbrella chart / GitOps)**
 
-Point `config.existingConfigMap` at a ConfigMap that already exists in the cluster.
-The chart will mount it automatically — no `extraVolumeMounts` / `extraVolumes` needed.
-When this option is set, `configOverride` and `configInternalOverride` are ignored and no
-ConfigMap is rendered by the chart.
+Point `config.existingConfigMap` at a ConfigMap that already exists in the cluster. The chart will mount it automatically — no `extraVolumeMounts` / `extraVolumes` needed. When this option is set, `configOverride` and `configInternalOverride` are ignored and no ConfigMap is rendered by the chart.
 
 ```yaml
 config:
@@ -136,7 +133,7 @@ you should copy the content of the shipped [config-override.php](./config/config
 
 ### Autoscaling
 
-All three deployments (`web`, `daemon`, `websocket`) support HPA.
+All three deployments (`web`, `daemon`, `websocket`) support HPA:
 
 ```yaml
 web:
@@ -145,6 +142,9 @@ web:
     minReplicas: 2
     maxReplicas: 10
     targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
+    # metrics: []   # Custom HPA v2 metrics
+    # behavior: {}  # Custom scale behavior
 
 daemon:
   autoscaling:
@@ -165,16 +165,17 @@ websocket:
 
 ```yaml
 persistence:
-  size: 2Gi
+  size: 1Gi
+  accessModes:
+    - ReadWriteMany
   # storageClass: ""
   # existingClaim: ""
+  # annotations: {}
 ```
 
 ### Shared Volumes
 
-All three deployments (`web`, `daemon`, `websocket`) and the bootstrap job mount the **same PVC** simultaneously.
-The PVC is therefore created with `accessMode: ReadWriteMany` (RWX) — the configured `storageClass` must support RWX
-(e.g. NFS, CephFS, Azure Files, EFS). `ReadWriteOnce` storage classes (e.g. standard cloud block storage) will **not**
+All three deployments (`web`, `daemon`, `websocket`) and the bootstrap job mount the **same PVC** simultaneously. The PVC is therefore created with `accessMode: ReadWriteMany` (RWX) — the configured `storageClass` must support RWX (e.g. NFS, CephFS, Azure Files, EFS). `ReadWriteOnce` storage classes (e.g. standard cloud block storage) will **not**
 work.
 
 #### PVC layout
@@ -186,3 +187,89 @@ A single PVC (`<release>-data`) is partitioned into three sub-directories via `s
 | `data`          | `/var/www/html/data`          | EspoCRM config, cache, logs, uploaded files |
 | `custom`        | `/var/www/html/custom`        | Custom back-end extensions & overrides      |
 | `client-custom` | `/var/www/html/client/custom` | Custom front-end assets                     |
+
+### Extensions
+
+To pre-install extensions during bootstrap, place `.zip` files in a directory and configure:
+
+```yaml
+bootstrap:
+  extensionsPath: "/extensions"  # Path inside container
+```
+
+Mount the directory containing your `.zip` files using `extraVolumes` and `extraVolumeMounts`:
+
+```yaml
+extraVolumes:
+  - name: extensions
+    configMap:
+      name: my-extensions  # or use emptyDir, PVC, etc.
+
+extraVolumeMounts:
+  - name: extensions
+    mountPath: /extensions
+    readOnly: true
+```
+
+The bootstrap job installs all `.zip` files found in `extensionsPath`. Existing extensions (by name+version) are skipped unless the PVC was recreated.
+
+### Environment Variables
+
+Add custom environment variables via ConfigMap or inline:
+
+```yaml
+# Option A: Inline variables (chart creates ConfigMap)
+extraEnv:
+  ESPOCRM_LANGUAGE: "de_DE"
+  ESPOCRM_DEFAULT_CURRENCY: "EUR"
+  ESPOCRM_THOUSAND_SEPARATOR: "."
+
+# Option B: Reference existing Secrets or ConfigMaps
+extraEnvFrom:
+  secretRef:
+    - my-secret-1
+    - my-secret-2
+  configMapRef:
+    - my-configmap
+```
+
+All variables are available in all deployments (`web`, `daemon`, `websocket`).
+
+### PHP Configuration
+
+Override `php.ini` settings per deployment:
+
+```yaml
+web:
+  php_ini: |
+    memory_limit=256M
+    upload_max_filesize=20M
+    post_max_size=20M
+
+daemon:
+  php_ini: |
+    memory_limit=512M
+    max_execution_time=0
+
+bootstrap:
+  php_ini: |
+    memory_limit=-1  # Unlimited for large installations
+```
+
+### Metrics & Monitoring
+
+If you have the EspoCRM metrics extension installed:
+
+```yaml
+metrics:
+  available: true  # Set to true if extension is installed
+  serviceMonitor:
+    enabled: true
+    path: "/api/v1/metrics"
+    interval: 30s
+    scrapeTimeout: 10s
+    annotations: { }
+    relabelings: [ ]
+```
+
+The chart creates a ServiceMonitor for Prometheus Operator when `serviceMonitor.enabled: true`.

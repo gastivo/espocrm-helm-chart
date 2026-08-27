@@ -3,7 +3,7 @@ fullnameOverride: ""
 
 image:
   repository: docker.io/espocrm/espocrm
-  tag: 9.3.10
+  tag: 10.0.6
 
 logging:
   level: DEBUG # DEBUG,NOTICE,WARNING,INFO,ERROR,CRITICAL

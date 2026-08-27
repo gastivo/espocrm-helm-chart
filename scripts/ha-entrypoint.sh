@@ -14,8 +14,18 @@ PERMISSION_FIX=(
 "/var/www/html/custom/Espo/Modules"
 )
 
-echo "info: Copying EspoCRM files from $SOURCE_FILES to /var/www/html/"
-cp -a "$SOURCE_FILES/." /var/www/html/
+# Only the 9.x image layout needs the application materialised: there /var/www/html is empty and
+# the application ships at /usr/src/espocrm. The 10.x image already has it at /var/www/html and
+# keeps only client/ and public/ in /usr/src/espocrm — copying that would additionally write
+# client/custom/modules/dummy.txt into the PVC on every pod start, since this copy (unlike
+# upstream's own copyClientFiles()) does not exclude custom/. Keyed off the source layout so one
+# chart serves both image versions.
+if [ -d "$SOURCE_FILES/application" ]; then
+  echo "info: 9.x image layout detected — copying EspoCRM files from $SOURCE_FILES to /var/www/html/"
+  cp -a "$SOURCE_FILES/." /var/www/html/
+else
+  echo "info: 10.x image layout detected — application already present at /var/www/html."
+fi
 
 if [ "${SKIP_CHOWN:-false}" != "true" ]; then
   echo "info: Setting ownership of /var/www/html/ to www-data (skipping mount points)"
@@ -31,6 +41,6 @@ else
   echo "info: Skipping chown (SKIP_CHOWN=true)"
 fi
 
-echo "info: Copy done, executing: $*"
+echo "info: Executing: $*"
 
 exec "$@"

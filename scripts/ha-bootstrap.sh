@@ -53,25 +53,79 @@ trap 'rm -rf "$LOCK_DIR"' EXIT
 
 SOURCE_FILES="/usr/src/espocrm"
 
-echo "info: Copying EspoCRM files from $SOURCE_FILES to /var/www/html/"
-
-# On a clean install (no ready marker from any previous revision), remove stale
-# config files that a previously crashed bootstrap run may have left behind.
-# Without this, the entrypoint sees isInstalled=1 and skips the installation.
-if [ ! -f "$READY_FILE" ]; then
-  echo "info: No previous bootstrap marker found — cleaning stale config files for fresh install."
-  rm -f /var/www/html/data/config.php /var/www/html/data/config-internal.php
+# Materialising the application only applies to the 9.x image layout, where /var/www/html is
+# empty and the application ships at /usr/src/espocrm. The 10.x image ships the application at
+# /var/www/html and leaves only client/ and public/ in /usr/src/espocrm — copying that would be
+# pointless and would write client/custom/modules/dummy.txt into the PVC on every pod start,
+# because unlike upstream's own copyClientFiles() this copy does not exclude custom/.
+# Keyed off the source layout so one chart serves both image versions.
+if [ -d "$SOURCE_FILES/application" ]; then
+  echo "info: 9.x image layout detected — copying EspoCRM files from $SOURCE_FILES to /var/www/html/"
+  cp -a "$SOURCE_FILES/." /var/www/html/
+else
+  echo "info: 10.x image layout detected — application already present at /var/www/html, nothing to copy."
 fi
 
-cp -a "$SOURCE_FILES/." /var/www/html/
+# NOTE: the config files must NOT be removed here. A former block deleted data/config.php and
+# data/config-internal.php whenever the ready marker was absent, to force a reinstall. Since
+# EspoCRM 10 that is unrecoverable: the entrypoint branches only on isInstalled, so without the
+# config it installs from scratch against populated tables and dies silently under `set -e`.
+# It also rotates cryptKey, which makes encrypted values in the surviving database undecryptable.
 
-echo "info: Running EspoCRM entrypoint..."
 export ESPOCRM_CONFIG_LOGGER_LEVEL=DEBUG
 
+echo "info: Running EspoCRM entrypoint..."
+
+# Under 9.x this performs the install/upgrade. Under 10.x it is a no-op: start() only runs when
+# the first argument is apache2*/php-fpm, which an init container cannot supply because it has to
+# exit rather than exec a web server. The explicit migration below covers the 10.x path.
 # Redirect stderr to stdout so entrypoint messages appear in kubectl logs
 /usr/local/bin/docker-entrypoint.sh 2>&1
 
-EXTENSIONS_PATH="${ESPOCRM_EXTENSIONS_PATH:-}"
+# Read isInstalled straight from the config files rather than via `bin/command config:get`:
+# no database connection is needed, it works before the instance is installed, and it does not
+# depend on a console command being registered the same way in both image versions.
+IS_INSTALLED="$(php -r '
+    foreach (["/var/www/html/data/config-internal.php", "/var/www/html/data/config.php"] as $file) {
+        if (!file_exists($file)) {
+            continue;
+        }
+        $config = include $file;
+        if (is_array($config) && array_key_exists("isInstalled", $config)) {
+            echo $config["isInstalled"] ? "true" : "false";
+            exit;
+        }
+    }
+    echo "false";
+' 2>/dev/null || echo false)"
+
+echo "info: Instance installed: ${IS_INSTALLED}"
+
+if [ "$IS_INSTALLED" = "true" ]; then
+  # This is what actionMigrate() does. Under 10.x it is the only place the migration runs at all;
+  # under 9.x the entrypoint above already upgraded, so it is a no-op. Either way it costs ~60ms
+  # once the version matches, and it happens here under the bootstrap lock rather than
+  # concurrently in every web pod.
+  echo "info: Clearing cache and running migration under the bootstrap lock."
+  /var/www/html/bin/command clear-cache
+  /var/www/html/bin/command migrate
+else
+  echo "warning: Instance is not installed — skipping migration and extension installation."
+  echo "warning:   Since EspoCRM 10 the initial installation happens in the web container's own"
+  echo "warning:   entrypoint, which starts only after this init container. Without config.php"
+  echo "warning:   the database parameters do not exist yet, so 'bin/command extension' would"
+  echo "warning:   fail with \"No database params in config\" and put this init container into"
+  echo "warning:   CrashLoopBackOff, blocking the very installation it depends on."
+  echo "warning:   The next 'helm upgrade' bumps HELM_RELEASE_REVISION, so this bootstrap runs"
+  echo "warning:   again against the now-installed instance and installs the extensions then."
+fi
+
+if [ "$IS_INSTALLED" = "true" ]; then
+  EXTENSIONS_PATH="${ESPOCRM_EXTENSIONS_PATH:-}"
+else
+  # See the warning above: installing extensions before the instance exists aborts this container.
+  EXTENSIONS_PATH=""
+fi
 
 if [ -n "$EXTENSIONS_PATH" ] && [ -d "$EXTENSIONS_PATH" ]; then
 

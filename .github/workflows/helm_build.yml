@@ -9,6 +9,10 @@ on:
       - 'Chart.yaml'
       - 'templates/**'
       - 'values.yaml'
+      # scripts/ and config/ are packaged into the chart via .Files.Glob in
+      # templates/configmap-misc.yaml, so a change there must publish a new chart version too.
+      - 'scripts/**'
+      - 'config/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

@@ -19,7 +19,7 @@ The chart deploys three separate deployments:
 ## Installation
 
 ```bash
-helm upgrade --install espocrm oci://ghcr.io/gastivo/helm-charts/espocrm:1.1.1 -n espocrm --create-namespace
+helm upgrade --install espocrm oci://ghcr.io/gastivo/helm-charts/espocrm:2.0.0 -n espocrm --create-namespace
 ```
 
 ## Configuration

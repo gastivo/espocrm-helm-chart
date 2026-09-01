@@ -9,6 +9,8 @@ on:
       - 'Chart.yaml'
       - 'templates/**'
       - 'values.yaml'
+      - 'scripts/**'
+      - 'config/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

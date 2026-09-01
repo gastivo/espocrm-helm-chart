@@ -51,27 +51,37 @@ echo "info: Acquired bootstrap lock for revision ${HELM_RELEASE_REVISION}."
 trap 'rm -rf "$LOCK_DIR"' EXIT
 # ────────────────────────────────────────────────────────────────────────────
 
-SOURCE_FILES="/usr/src/espocrm"
-
-echo "info: Copying EspoCRM files from $SOURCE_FILES to /var/www/html/"
-
-# On a clean install (no ready marker from any previous revision), remove stale
-# config files that a previously crashed bootstrap run may have left behind.
-# Without this, the entrypoint sees isInstalled=1 and skips the installation.
-if [ ! -f "$READY_FILE" ]; then
-  echo "info: No previous bootstrap marker found — cleaning stale config files for fresh install."
-  rm -f /var/www/html/data/config.php /var/www/html/data/config-internal.php
-fi
-
-cp -a "$SOURCE_FILES/." /var/www/html/
-
 echo "info: Running EspoCRM entrypoint..."
 export ESPOCRM_CONFIG_LOGGER_LEVEL=DEBUG
 
 # Redirect stderr to stdout so entrypoint messages appear in kubectl logs
 /usr/local/bin/docker-entrypoint.sh 2>&1
 
-EXTENSIONS_PATH="${ESPOCRM_EXTENSIONS_PATH:-}"
+IS_INSTALLED="$(php -r '
+    foreach (["/var/www/html/data/config-internal.php", "/var/www/html/data/config.php"] as $file) {
+        if (!file_exists($file)) {
+            continue;
+        }
+        $config = include $file;
+        if (is_array($config) && array_key_exists("isInstalled", $config)) {
+            echo $config["isInstalled"] ? "true" : "false";
+            exit;
+        }
+    }
+    echo "false";
+' 2>/dev/null || echo false)"
+
+echo "info: Instance installed: ${IS_INSTALLED}"
+
+if [ "$IS_INSTALLED" = "true" ]; then
+  echo "info: Clearing cache and running migration under the bootstrap lock."
+  /var/www/html/bin/command clear-cache
+  /var/www/html/bin/command migrate
+  EXTENSIONS_PATH="${ESPOCRM_EXTENSIONS_PATH:-}"
+else
+  echo "warning: Instance is not installed — skipping migration and extension installation."
+  EXTENSIONS_PATH=""
+fi
 
 if [ -n "$EXTENSIONS_PATH" ] && [ -d "$EXTENSIONS_PATH" ]; then
 

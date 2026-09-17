@@ -103,6 +103,14 @@ web:
   # podLabels: {}
   service:
     type: ClusterIP
+    # sessionAffinity ensures requests from the same client IP are routed to the same pod.
+    # Required for OIDC PKCE flows with file-based PHP sessions across multiple replicas.
+    # Options: None (default), ClientIP
+    sessionAffinity: None
+    # sessionAffinityConfig is only used when sessionAffinity is ClientIP
+    sessionAffinityConfig:
+      clientIP:
+        timeoutSeconds: 1800  # 30 minutes
   # php_ini: |
   #   memory_limit=256M
   #  resources:

@@ -15,7 +15,9 @@
 
 set -euo pipefail
 
-source /usr/local/bin/docker-entrypoint.sh
+# Explicit empty positional parameters: this only defines the official
+# entrypoint's functions without triggering its own apache2*/php-fpm gate.
+source /usr/local/bin/docker-entrypoint.sh ""
 
 warnInsecureCredentials
 warnLegacyInstallation
@@ -25,6 +27,8 @@ IS_INSTALLED="$(bin/command config:get isInstalled 2>/dev/null || echo false)"
 if [ "$IS_INSTALLED" != "true" ]; then
   echo "info: Instance not installed yet — running the official entrypoint's install flow."
   start
+elif isLegacy; then
+  echo "info: Legacy installation layout detected — skipping unsupported startup steps, same as the official entrypoint."
 else
   echo "info: Instance already installed — bootstrap init container already migrated this revision under lock; skipping redundant clear-cache/migrate."
   copyPublicFiles

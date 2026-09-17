@@ -161,6 +161,28 @@ websocket:
     targetCPUUtilizationPercentage: 80
 ```
 
+### Session Affinity
+
+When running multiple `web` replicas with file-based PHP sessions (the default), session affinity ensures requests from the same client are routed to the same pod. This is required for OIDC PKCE authentication flows:
+
+```yaml
+web:
+  service:
+    sessionAffinity: ClientIP
+    sessionAffinityConfig:
+      clientIP:
+        timeoutSeconds: 1800  # 30 minutes
+```
+
+**When to use:**
+- Multiple `web.replicaCount` > 1
+- OIDC authentication with PKCE enabled
+- File-based PHP sessions (default)
+
+**When NOT needed:**
+- Single replica (`web.replicaCount: 1`)
+- Redis or database-backed sessions
+
 ### Persistence
 
 ```yaml

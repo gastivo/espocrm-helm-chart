@@ -81,7 +81,7 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: [ "/bin/bash", "/usr/local/bin/ha-entrypoint.sh" ]
-          args: [ "docker-entrypoint.sh", "apache2-foreground" ]
+          args: [ "ha-web.sh" ]
           ports:
             - name: http
               containerPort: 8080
@@ -107,6 +107,10 @@ spec:
             {{- toYaml .Values.web.resources | nindent 12 }}
           volumeMounts:
             {{- include "espocrm.commonVolumeMounts" . | nindent 12 }}
+            - name: espocrm-misc
+              mountPath: /usr/local/bin/ha-web.sh
+              subPath: ha-web.sh
+              readOnly: true
             - name: espocrm-misc
               mountPath: /etc/apache2/sites-enabled/000-default.conf
               subPath: 000-default.conf

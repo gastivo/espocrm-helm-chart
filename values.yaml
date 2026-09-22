@@ -22,6 +22,22 @@ ingress:
   #   cert-manager.io/cluster-issuer: letsencrypt-prod
   #   nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
   #   nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+  # Session affinity configuration for sticky sessions.
+  # CRITICAL: When using an ingress controller (Traefik, NGINX, etc.), session affinity
+  # MUST be configured at the ingress level, NOT at the Service level. Service-level
+  # sessionAffinity (web.service.sessionAffinity) only works for direct ClusterIP traffic,
+  # which ingress controllers bypass entirely.
+  sessionAffinity:
+    # Enable sticky sessions (required for OIDC PKCE with file-based PHP sessions)
+    enabled: false
+    # Ingress controller type: "traefik" or "nginx"
+    type: "traefik"
+    # Cookie configuration
+    cookieName: "espocrm_session"
+    # Cookie attributes
+    httpOnly: true
+    secure: true
+    sameSite: "lax"  # Options: "none", "lax", "strict"
 
 admin:
   username: "admin"

@@ -6,10 +6,25 @@ metadata:
   name: {{ $fullName }}
   labels:
     {{- include "espocrm.labels" . | nindent 4 }}
-  {{- with .Values.ingress.annotations }}
   annotations:
+    {{- if .Values.ingress.sessionAffinity.enabled }}
+    {{- if eq .Values.ingress.sessionAffinity.type "traefik" }}
+    traefik.ingress.kubernetes.io/service.sticky.cookie: "true"
+    traefik.ingress.kubernetes.io/service.sticky.cookie.name: {{ .Values.ingress.sessionAffinity.cookieName | quote }}
+    traefik.ingress.kubernetes.io/service.sticky.cookie.httponly: {{ .Values.ingress.sessionAffinity.httpOnly | quote }}
+    traefik.ingress.kubernetes.io/service.sticky.cookie.secure: {{ .Values.ingress.sessionAffinity.secure | quote }}
+    traefik.ingress.kubernetes.io/service.sticky.cookie.samesite: {{ .Values.ingress.sessionAffinity.sameSite | quote }}
+    {{- else if eq .Values.ingress.sessionAffinity.type "nginx" }}
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/affinity-mode: "persistent"
+    nginx.ingress.kubernetes.io/session-cookie-name: {{ .Values.ingress.sessionAffinity.cookieName | quote }}
+    nginx.ingress.kubernetes.io/session-cookie-max-age: "1800"
+    nginx.ingress.kubernetes.io/session-cookie-samesite: {{ .Values.ingress.sessionAffinity.sameSite | title | quote }}
+    {{- end }}
+    {{- end }}
+    {{- with .Values.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- end }}
 spec:
   {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}

@@ -2,7 +2,7 @@ apiVersion: v2
 name: espocrm
 description: A Helm chart for deploying the EspoCRM.
 type: application
-version: 2.1.1
+version: 2.1.2
 appVersion: "10.0.6"
 icon: https://www.espocrm.com/images/favicon.png
 home: https://www.espocrm.com

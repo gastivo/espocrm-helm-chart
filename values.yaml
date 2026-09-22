@@ -22,6 +22,16 @@ ingress:
   #   cert-manager.io/cluster-issuer: letsencrypt-prod
   #   nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
   #   nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+  # Session affinity (sticky sessions) for OIDC PKCE flows with file-based PHP sessions.
+  # CRITICAL: Must be configured at the ingress level. Service-level sessionAffinity does NOT
+  # work with ingress controllers because they bypass kube-proxy entirely.
+  sessionAffinity:
+    enabled: false
+    type: "traefik"  # Supports "traefik" or "nginx"
+    cookieName: "espocrm_session"
+    httpOnly: true
+    secure: true
+    sameSite: "lax"  # Options: "none", "lax", "strict"
 
 admin:
   username: "admin"
@@ -103,14 +113,6 @@ web:
   # podLabels: {}
   service:
     type: ClusterIP
-    # sessionAffinity ensures requests from the same client IP are routed to the same pod.
-    # Required for OIDC PKCE flows with file-based PHP sessions across multiple replicas.
-    # Options: None (default), ClientIP
-    sessionAffinity: None
-    # sessionAffinityConfig is only used when sessionAffinity is ClientIP
-    sessionAffinityConfig:
-      clientIP:
-        timeoutSeconds: 1800  # 30 minutes
   # php_ini: |
   #   memory_limit=256M
   #  resources:

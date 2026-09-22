@@ -161,17 +161,23 @@ websocket:
     targetCPUUtilizationPercentage: 80
 ```
 
-### Session Affinity
+### Session Affinity (Sticky Sessions)
 
-When running multiple `web` replicas with file-based PHP sessions (the default), session affinity ensures requests from the same client are routed to the same pod. This is required for OIDC PKCE authentication flows:
+When running multiple `web` replicas with file-based PHP sessions (the default), session affinity ensures requests from the same client are routed to the same pod. This is **required** for OIDC PKCE authentication flows.
+
+**CRITICAL:** Session affinity **must** be configured at the **Ingress level**. Kubernetes Service `sessionAffinity: ClientIP` does **not** work with ingress controllers because they send traffic directly to Pod IPs, completely bypassing kube-proxy and the Service.
 
 ```yaml
-web:
-  service:
-    sessionAffinity: ClientIP
-    sessionAffinityConfig:
-      clientIP:
-        timeoutSeconds: 1800  # 30 minutes
+ingress:
+  enabled: true
+  className: traefik
+  sessionAffinity:
+    enabled: true
+    type: traefik  # Supports "traefik" or "nginx"
+    cookieName: "espocrm_session"
+    httpOnly: true
+    secure: true
+    sameSite: "lax"  # Options: "none", "lax", "strict"
 ```
 
 **When to use:**

@@ -6,13 +6,6 @@ metadata:
     {{- include "espocrm.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.web.service.type }}
-  {{- if .Values.web.service.sessionAffinity }}
-  sessionAffinity: {{ .Values.web.service.sessionAffinity }}
-  {{- end }}
-  {{- if and (eq .Values.web.service.sessionAffinity "ClientIP") .Values.web.service.sessionAffinityConfig }}
-  sessionAffinityConfig:
-    {{- toYaml .Values.web.service.sessionAffinityConfig | nindent 4 }}
-  {{- end }}
   ports:
     - port: 8080
       targetPort: http

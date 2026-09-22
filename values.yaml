@@ -23,11 +23,11 @@ ingress:
   #   nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
   #   nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
   # Session affinity (sticky sessions) for OIDC PKCE flows with file-based PHP sessions.
-  # CRITICAL: Must be configured at the ingress level. Service-level sessionAffinity does NOT
-  # work with ingress controllers because they bypass kube-proxy entirely.
+  # Configured via annotations on the Service resource. The chart applies the correct
+  # annotations based on your ingress controller type.
   sessionAffinity:
     enabled: false
-    type: "traefik"  # Supports "traefik" or "nginx"
+    type: "traefik"  # Only "traefik" is currently supported
     cookieName: "espocrm_session"
     httpOnly: true
     secure: true

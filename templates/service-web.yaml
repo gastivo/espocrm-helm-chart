@@ -4,6 +4,16 @@ metadata:
   name: {{ include "espocrm.fullname" . }}-web
   labels:
     {{- include "espocrm.labels" . | nindent 4 }}
+  {{- if .Values.ingress.sessionAffinity.enabled }}
+  {{- if eq .Values.ingress.sessionAffinity.type "traefik" }}
+  annotations:
+    traefik.ingress.kubernetes.io/service.sticky.cookie: "true"
+    traefik.ingress.kubernetes.io/service.sticky.cookie.name: {{ .Values.ingress.sessionAffinity.cookieName | quote }}
+    traefik.ingress.kubernetes.io/service.sticky.cookie.httponly: {{ .Values.ingress.sessionAffinity.httpOnly | quote }}
+    traefik.ingress.kubernetes.io/service.sticky.cookie.secure: {{ .Values.ingress.sessionAffinity.secure | quote }}
+    traefik.ingress.kubernetes.io/service.sticky.cookie.samesite: {{ .Values.ingress.sessionAffinity.sameSite | quote }}
+  {{- end }}
+  {{- end }}
 spec:
   type: {{ .Values.web.service.type }}
   ports:

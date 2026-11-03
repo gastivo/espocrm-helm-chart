@@ -9,9 +9,10 @@
 # core `migrate` command again with no lock, colliding with clearCache()'s
 # full data/cache wipe on the shared RWX PVC while other pods are serving
 # traffic. This wrapper skips that redundant re-run once the
-# instance is installed, while still keeping the permission fix
-# (setPermissions) that securityContext relies on. On a genuinely fresh
-# install, the official flow runs completely unmodified.
+# instance is installed, while still keeping the permission fix that
+# securityContext relies on (as a conditional chown instead of the official
+# recursive setPermissions). On a genuinely fresh install, the official flow
+# runs completely unmodified.
 
 set -euo pipefail
 
@@ -36,7 +37,10 @@ else
   echo "info: Instance already installed — bootstrap init container already migrated this revision under lock; skipping redundant clear-cache/migrate."
   copyPublicFiles
   copyClientFiles
-  setPermissions
+  # Only touch objects with wrong ownership: a recursive chown writes metadata
+  # for every file, which is very slow on network volumes.
+  find "${CUSTOM_RESOURCE_LIST[@]}" \( ! -user www-data -o ! -group www-data \) \
+    -exec chown www-data:www-data {} +
 fi
 
 applyConfigEnv

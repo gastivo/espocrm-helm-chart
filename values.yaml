@@ -251,6 +251,9 @@ extraVolumeMounts: [ ]
 # Must match the names referenced in extraVolumeMounts above.
 extraVolumes: [ ]
 
+# Mount the ServiceAccount token into the pods. EspoCRM does not call the Kubernetes API.
+automountServiceAccountToken: false
+
 # Pod-level security context. fsGroup: 33 ensures all mounted PVC volumes
 # are group-owned by www-data so Apache workers can write to them.
 podSecurityContext:

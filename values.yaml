@@ -261,6 +261,8 @@ podSecurityContext:
 
 # Container-level security context. Containers must run as root (uid 0)
 # because docker-entrypoint.sh calls chown inside setPermissions().
+# Any container securityContext field can be set here, e.g. `readOnlyRootFilesystem: true`
+# (then writable paths need `extraVolumes`/`extraVolumeMounts`).
 securityContext:
   allowPrivilegeEscalation: false
 

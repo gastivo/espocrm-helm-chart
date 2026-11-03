@@ -39,6 +39,8 @@ spec:
         - name: {{ .Chart.Name }}-wait-bootstrap
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
           env:
             - name: HELM_RELEASE_REVISION
               value: {{ include "espocrm.bootstrapID" . | quote }}

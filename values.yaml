@@ -258,7 +258,8 @@ podSecurityContext:
 
 # Container-level security context. Containers must run as root (uid 0)
 # because docker-entrypoint.sh calls chown inside setPermissions().
-securityContext: { }
+securityContext:
+  allowPrivilegeEscalation: false
 
 # enable this only if you have a metrics Extension installed!
 metrics:

@@ -251,6 +251,9 @@ extraVolumeMounts: [ ]
 # Must match the names referenced in extraVolumeMounts above.
 extraVolumes: [ ]
 
+# Mount the ServiceAccount token into the pods. EspoCRM does not call the Kubernetes API.
+automountServiceAccountToken: false
+
 # Pod-level security context. fsGroup: 33 ensures all mounted PVC volumes
 # are group-owned by www-data so Apache workers can write to them.
 podSecurityContext:
@@ -258,7 +261,10 @@ podSecurityContext:
 
 # Container-level security context. Containers must run as root (uid 0)
 # because docker-entrypoint.sh calls chown inside setPermissions().
-securityContext: { }
+# Any container securityContext field can be set here, e.g. `readOnlyRootFilesystem: true`
+# (then writable paths need `extraVolumes`/`extraVolumeMounts`).
+securityContext:
+  allowPrivilegeEscalation: false
 
 # enable this only if you have a metrics Extension installed!
 metrics:

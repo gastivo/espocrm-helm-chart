@@ -110,6 +110,12 @@ daemon:
     # metrics: []        # Fully overrides the generated metrics block (HPA v2 metrics array)
     # behavior: {}       # Fully overrides the behavior block (scaleUp/scaleDown policies)
 
+  # PodDisruptionBudget: minAvailable wins when set, otherwise maxUnavailable (default 1)
+  pdb:
+    enabled: false
+    # minAvailable: 1
+    # maxUnavailable: 1
+
 web:
   replicaCount: 1
   affinity:
@@ -165,6 +171,12 @@ web:
     # metrics: []        # Fully overrides the generated metrics block (HPA v2 metrics array)
     # behavior: {}       # Fully overrides the behavior block (scaleUp/scaleDown policies)
 
+  # PodDisruptionBudget: minAvailable wins when set, otherwise maxUnavailable (default 1)
+  pdb:
+    enabled: false
+    # minAvailable: 1
+    # maxUnavailable: 1
+
 websocket:
   enabled: false
   replicaCount: 1
@@ -218,6 +230,12 @@ websocket:
     # targetMemoryUtilizationPercentage: 80
     # metrics: []        # Fully overrides the generated metrics block (HPA v2 metrics array)
     # behavior: {}       # Fully overrides the behavior block (scaleUp/scaleDown policies)
+
+  # PodDisruptionBudget: minAvailable wins when set, otherwise maxUnavailable (default 1)
+  pdb:
+    enabled: false
+    # minAvailable: 1
+    # maxUnavailable: 1
 
 persistence:
   size: 1Gi

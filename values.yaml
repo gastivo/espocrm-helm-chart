@@ -110,6 +110,13 @@ daemon:
     # metrics: []        # Fully overrides the generated metrics block (HPA v2 metrics array)
     # behavior: {}       # Fully overrides the behavior block (scaleUp/scaleDown policies)
 
+  # Topology spread constraints; a constraint without labelSelector gets the selector labels of this component
+  topologySpreadConstraints: []
+  # topologySpreadConstraints:
+  #   - maxSkew: 1
+  #     topologyKey: kubernetes.io/hostname
+  #     whenUnsatisfiable: ScheduleAnyway
+
   # PodDisruptionBudget: minAvailable wins when set, otherwise maxUnavailable (default 1)
   pdb:
     enabled: false
@@ -171,6 +178,13 @@ web:
     # metrics: []        # Fully overrides the generated metrics block (HPA v2 metrics array)
     # behavior: {}       # Fully overrides the behavior block (scaleUp/scaleDown policies)
 
+  # Topology spread constraints; a constraint without labelSelector gets the selector labels of this component
+  topologySpreadConstraints: []
+  # topologySpreadConstraints:
+  #   - maxSkew: 1
+  #     topologyKey: kubernetes.io/hostname
+  #     whenUnsatisfiable: ScheduleAnyway
+
   # PodDisruptionBudget: minAvailable wins when set, otherwise maxUnavailable (default 1)
   pdb:
     enabled: false
@@ -230,6 +244,13 @@ websocket:
     # targetMemoryUtilizationPercentage: 80
     # metrics: []        # Fully overrides the generated metrics block (HPA v2 metrics array)
     # behavior: {}       # Fully overrides the behavior block (scaleUp/scaleDown policies)
+
+  # Topology spread constraints; a constraint without labelSelector gets the selector labels of this component
+  topologySpreadConstraints: []
+  # topologySpreadConstraints:
+  #   - maxSkew: 1
+  #     topologyKey: kubernetes.io/hostname
+  #     whenUnsatisfiable: ScheduleAnyway
 
   # PodDisruptionBudget: minAvailable wins when set, otherwise maxUnavailable (default 1)
   pdb:

@@ -114,6 +114,10 @@ spec:
       affinity:
         {{- $affinity | nindent 8 }}
       {{- end }}
+      {{- with .Values.daemon.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- include "espocrm.topologySpreadConstraints" (dict "component" "daemon" "constraints" . "context" $) | nindent 8 }}
+      {{- end }}
       {{- with .Values.daemon.tolerations | default .Values.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}

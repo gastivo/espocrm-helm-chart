@@ -75,6 +75,17 @@ app.kubernetes.io/component: websocket
 {{- end }}
 
 {{/*
+espocrm.topologySpreadConstraints renders the topology spread constraints of a component.
+A constraint without labelSelector gets the selector labels of the component.
+*/}}
+{{- define "espocrm.topologySpreadConstraints" -}}
+{{- $selector := dict "matchLabels" (include (printf "espocrm.selectorLabels%s" (title .component)) .context | fromYaml) -}}
+{{- range .constraints }}
+- {{- toYaml (ternary . (merge (deepCopy .) (dict "labelSelector" $selector)) (hasKey . "labelSelector")) | nindent 2 }}
+{{- end }}
+{{- end -}}
+
+{{/*
 espocrm.databaseSecretName returns the DB secret name.
 */}}
 {{- define "espocrm.databaseSecretName" -}}

@@ -131,6 +131,10 @@ spec:
       affinity:
         {{- $affinity | nindent 8 }}
       {{- end }}
+      {{- with .Values.websocket.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- include "espocrm.topologySpreadConstraints" (dict "component" "websocket" "constraints" . "context" $) | nindent 8 }}
+      {{- end }}
       {{- with .Values.websocket.tolerations | default .Values.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}

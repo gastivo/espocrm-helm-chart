@@ -172,6 +172,18 @@ web:
     maxUnavailable: 1
 ```
 
+### Topology Spread Constraints
+
+`web`, `daemon` and `websocket` accept `topologySpreadConstraints` (empty by default). A constraint without `labelSelector` gets the selector labels of the component:
+
+```yaml
+web:
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+```
+
 ### Session Affinity (Sticky Sessions)
 
 When running multiple `web` replicas with file-based PHP sessions (the default), session affinity ensures requests from the same client are routed to the same pod. This is **required** for OIDC PKCE authentication flows.

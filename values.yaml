@@ -70,6 +70,16 @@ bootstrap:
       cpu: 800m
       memory: 1Gi
 
+# Resource requests/limits for the wait-bootstrap init containers of daemon and websocket
+waitBootstrap:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
 daemon:
   replicaCount: 1
   terminationGracePeriodSeconds: 30

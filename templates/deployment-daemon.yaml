@@ -46,6 +46,10 @@ spec:
             - name: HELM_RELEASE_REVISION
               value: {{ include "espocrm.bootstrapID" . | quote }}
           command: [ "/bin/bash", "/usr/local/bin/ha-wait-bootstrap.sh" ]
+          {{- with .Values.waitBootstrap.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           volumeMounts:
             - name: espocrm-misc
               mountPath: /usr/local/bin/ha-wait-bootstrap.sh

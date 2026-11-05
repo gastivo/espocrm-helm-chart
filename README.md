@@ -161,6 +161,17 @@ websocket:
     targetCPUUtilizationPercentage: 80
 ```
 
+### PodDisruptionBudget
+
+All three deployments (`web`, `daemon`, `websocket`) can get a PodDisruptionBudget (disabled by default). `minAvailable` wins when set, otherwise `maxUnavailable` is used (default `1`):
+
+```yaml
+web:
+  pdb:
+    enabled: true
+    maxUnavailable: 1
+```
+
 ### Session Affinity (Sticky Sessions)
 
 When running multiple `web` replicas with file-based PHP sessions (the default), session affinity ensures requests from the same client are routed to the same pod. This is **required** for OIDC PKCE authentication flows.

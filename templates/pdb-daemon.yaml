@@ -1,0 +1,18 @@
+{{- if .Values.daemon.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "espocrm.fullname" . }}-daemon
+  labels:
+    {{- include "espocrm.labels" . | nindent 4 }}
+    app.kubernetes.io/component: daemon
+spec:
+  {{- if .Values.daemon.pdb.minAvailable }}
+  minAvailable: {{ .Values.daemon.pdb.minAvailable }}
+  {{- else }}
+  maxUnavailable: {{ .Values.daemon.pdb.maxUnavailable | default 1 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "espocrm.selectorLabelsDaemon" . | nindent 6 }}
+{{- end }}

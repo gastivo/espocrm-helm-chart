@@ -293,11 +293,34 @@ externalDatabase:
   existingSecret: ""
   secretKey: "db-password"
 
-# Extra volume mounts added to ALL pods (web, daemon, websocket, bootstrap init-container).
+# Extra volume mounts added to ALL containers and init containers
+# (web, daemon, websocket, bootstrap and wait-bootstrap init containers).
 extraVolumeMounts: [ ]
 
-# Extra volumes added to ALL pods (web, daemon, websocket, bootstrap init-container).
+# Extra volumes added to ALL pods (web, daemon, websocket).
 # Must match the names referenced in extraVolumeMounts above.
+#
+# Example: readOnlyRootFilesystem (off by default). Set it in `securityContext` and give the
+# writable paths an emptyDir. data, custom and client/custom stay on the PVC, config comes
+# from ConfigMaps.
+#
+#   securityContext:
+#     allowPrivilegeEscalation: false
+#     readOnlyRootFilesystem: true
+#   extraVolumes:
+#     - name: tmp
+#       emptyDir: { }
+#     - name: run-apache2      # web only, harmless on daemon/websocket
+#       emptyDir: { }
+#     - name: lock-apache2     # web only, harmless on daemon/websocket
+#       emptyDir: { }
+#   extraVolumeMounts:
+#     - name: tmp
+#       mountPath: /tmp
+#     - name: run-apache2
+#       mountPath: /run/apache2
+#     - name: lock-apache2
+#       mountPath: /var/lock/apache2
 extraVolumes: [ ]
 
 # Mount the ServiceAccount token into the pods. EspoCRM does not call the Kubernetes API.
@@ -308,7 +331,8 @@ automountServiceAccountToken: false
 podSecurityContext:
   fsGroup: 33  # www-data
 
-# Container-level security context. Containers must run as root (uid 0)
+# Container-level security context, applied to all containers and init containers
+# (bootstrap, wait-bootstrap). Containers must run as root (uid 0)
 # because docker-entrypoint.sh calls chown inside setPermissions().
 # Any container securityContext field can be set here, e.g. `readOnlyRootFilesystem: true`
 # (then writable paths need `extraVolumes`/`extraVolumeMounts`).

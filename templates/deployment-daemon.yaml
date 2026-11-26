@@ -58,6 +58,9 @@ spec:
             - name: espocrm-data
               mountPath: /var/www/html/data
               subPath: data
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
       containers:
         - name: {{ .Chart.Name }}-daemon
           securityContext:
